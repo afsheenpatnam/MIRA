@@ -137,6 +137,17 @@
 .c-hello h2 em{font-style:normal;background:linear-gradient(90deg,#ffb36b,#ff5b14);-webkit-background-clip:text;background-clip:text;color:transparent}
 .c-sub{margin:12px auto 0;max-width:54ch;color:var(--dim);font-size:14px;animation:rise .6s .2s var(--ease) both}
 .c-sugs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:30px;width:100%;text-align:left}
+/* Short screens (laptops, zoomed browsers): shrink the welcome so the suggestion cards stay in view. */
+@media (max-height:820px){
+  .c-hello{padding-top:12px}
+  .c-orb{width:92px;height:92px}
+  .c-greet{margin-top:8px}
+  .c-hello h2{font-size:clamp(24px,3.2vw,34px)}
+  .c-sub{margin-top:8px}
+  .c-sugs{margin-top:16px}
+  .c-sug{padding:10px 12px}
+  .am-go{margin-top:16px}
+}
 @media (max-width:640px){.c-sugs{grid-template-columns:1fr}}
 .c-sug{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:linear-gradient(180deg,#151517,#111113);border:1px solid var(--line);transition:border-color .3s,transform .35s var(--ease),box-shadow .35s;animation:rise .6s var(--ease) both}
 .c-sug:hover{border-color:rgba(255,138,61,.35);transform:translateY(-2px);box-shadow:0 14px 34px -18px rgba(255,91,20,.6)}
