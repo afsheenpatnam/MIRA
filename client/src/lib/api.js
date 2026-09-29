@@ -1,3 +1,5 @@
+import { adminApi } from './adminApi.js';
+
 const TOKEN_KEY = 'mira.token';
 
 function readToken() {
@@ -39,10 +41,15 @@ async function request(path, { method = 'GET', body } = {}) {
 export const api = {
   hasToken: () => Boolean(token),
   logout() { token = null; writeToken(null); },
+  /** Logs in a company user or a MIRA admin. Returns `kind`: 'company' or 'admin'. */
   async login(email, password) {
     const data = await request('/auth/login', { method: 'POST', body: { email, password } });
-    token = data.token;
-    writeToken(token);
+    if (data.kind === 'admin') {
+      adminApi.useSession(data.token);
+    } else {
+      token = data.token;
+      writeToken(token);
+    }
     return data;
   },
   async signup(details) {

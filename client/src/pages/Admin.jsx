@@ -26,48 +26,6 @@ function Tile({ label, value, sub }) {
   return <div className="adm-tile"><span>{label}</span><b>{value}</b>{sub && <small>{sub}</small>}</div>;
 }
 
-/* ---------- login ---------- */
-
-function AdminLogin({ onDone }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const submit = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      onDone(await adminApi.login(email, password));
-    } catch (err) {
-      setError(err.message);
-      setBusy(false);
-    }
-  };
-  return (
-    <div className="adm-login">
-      <form className="login-card" onSubmit={submit}>
-        <div className="login-mark"><OrbMark />MIRA <span className="adm-badge">Admin</span></div>
-        <h2>Platform admin</h2>
-        <p className="sub">For the team running MIRA. Company accounts can't log in here.</p>
-        <label htmlFor="a-email">Admin email</label>
-        <div className="field">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m4 7 8 6 8-6" /></svg>
-          <input id="a-email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <label htmlFor="a-pass">Password</label>
-        <div className="field">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-          <input id="a-pass" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-        <div className="login-err" role="alert">{error}</div>
-        <button className="login-go" disabled={busy}>{busy ? <><span className="spin" />Checking…</> : <>Log in <span>→</span></>}</button>
-        <p className="login-switch"><a href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }}>← Back to MIRA</a></p>
-      </form>
-    </div>
-  );
-}
-
 /* ---------- companies ---------- */
 
 function Companies({ onOpen }) {
@@ -183,7 +141,6 @@ const VIEWS = [
 
 export default function Admin() {
   const [admin, setAdmin] = useState(null);
-  const [checking, setChecking] = useState(adminApi.hasToken());
   const [view, setView] = useState('today');
   const [company, setCompany] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
@@ -199,9 +156,10 @@ export default function Admin() {
   const adminRef = useRef(null);
   adminRef.current = admin;
 
+  // Admins log in on the normal login page. Without an admin session, send them there.
   useEffect(() => {
-    if (!adminApi.hasToken()) return;
-    adminApi.me().then(setAdmin).catch(() => {}).finally(() => setChecking(false));
+    if (!adminApi.hasToken()) { navigate('/login', { replace: true }); return; }
+    adminApi.me().then(setAdmin).catch(() => navigate('/login', { replace: true }));
   }, []);
 
   const toast = useCallback((msg) => {
@@ -236,10 +194,9 @@ export default function Admin() {
     setMuted(Voice.muted);
     toast(Voice.muted ? 'Voice off. MIRA shows subtitles only.' : 'Voice on.');
   };
-  const logout = () => { Voice.stop(); adminApi.logout(); setAdmin(null); setMessages([]); setView('today'); };
+  const logout = () => { Voice.stop(); adminApi.logout(); navigate('/'); };
 
-  if (checking) return <div className="ws-loading"><p>Checking admin session…</p></div>;
-  if (!admin) return <AdminLogin onDone={setAdmin} />;
+  if (!admin) return <div className="ws-loading"><p>Opening the admin dashboard…</p></div>;
 
   const current = VIEWS.find((v) => v.id === view);
   return (

@@ -3,6 +3,7 @@ import { scrollToId } from '../lib/scroll.js';
 import { OrbMark } from './Orb.jsx';
 import { navigate } from '../lib/router.js';
 import { api } from '../lib/api.js';
+import { adminApi } from '../lib/adminApi.js';
 
 const LINKS = [
   ['product', 'Product'],
@@ -16,7 +17,8 @@ export default function Nav() {
   const [active, setActive] = useState(null);
   const [glider, setGlider] = useState({ left: 0, width: 0 });
   const linksRef = useRef(null);
-  const loggedIn = api.hasToken();
+  // Already logged in: offer the way back in (company workspace first, then the admin dashboard).
+  const back = api.hasToken() ? { path: '/app', label: 'Open workspace' } : adminApi.hasToken() ? { path: '/admin', label: 'Open admin' } : null;
 
   // Shrink and darken the bar once the page scrolls.
   useEffect(() => {
@@ -78,8 +80,8 @@ export default function Nav() {
           ))}
         </div>
         <div className="right">
-          {loggedIn ? (
-            <a className="start" href="/app" onClick={to('/app')}>Open workspace <span>→</span></a>
+          {back ? (
+            <a className="start" href={back.path} onClick={to(back.path)}>{back.label} <span>→</span></a>
           ) : (
             <>
               <a className="nav-login" href="/login" onClick={to('/login')}>Log in</a>
@@ -94,7 +96,7 @@ export default function Nav() {
           <button className="x" onClick={() => setOpen(false)} aria-label="Close menu">✕</button>
           <span />
           {LINKS.map(([id, label]) => <a key={id} href={`#${id}`} onClick={go(id)}>{label}</a>)}
-          {loggedIn ? <a href="/app" onClick={to('/app')}>Open workspace</a> : (
+          {back ? <a href={back.path} onClick={to(back.path)}>{back.label}</a> : (
             <>
               <a href="/signup" onClick={to('/signup')}>Sign up</a>
               <a href="/login" onClick={to('/login')}>Log in</a>

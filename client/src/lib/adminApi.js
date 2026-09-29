@@ -28,12 +28,8 @@ async function request(path, { method = 'GET', body } = {}) {
 export const adminApi = {
   hasToken: () => Boolean(token),
   logout() { token = null; write(null); },
-  async login(email, password) {
-    const data = await request('/login', { method: 'POST', body: { email, password } });
-    token = data.token;
-    write(token);
-    return data.admin;
-  },
+  // Admins log in on the normal login page; it hands the admin session over here.
+  useSession(t) { token = t; write(t); },
   me: () => request('/me').then((d) => d.admin),
   companies: () => request('/companies').then((d) => d.companies),
   company: (id) => request(`/companies/${id}`),
