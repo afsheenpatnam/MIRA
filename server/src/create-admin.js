@@ -32,5 +32,5 @@ await Admin.findOneAndUpdate(
 );
 // Creating an admin or resetting a password is always recorded in the audit ledger.
 await audit({ category: 'admin', action: 'admin.created', actor: asSystem('Terminal (create-admin)'), target: email.toLowerCase(), detail: { reset: Boolean(existed) } });
-console.log(`${existed ? 'Updated' : 'Created'} admin ${email.toLowerCase()}. Log in at /admin.`);
+console.log(`${existed ? 'Updated' : 'Created'} admin ${email.toLowerCase()}. Log in on the normal login page; it opens the admin dashboard.`);
 await mongoose.disconnect();

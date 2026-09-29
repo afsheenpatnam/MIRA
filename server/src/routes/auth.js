@@ -3,10 +3,12 @@ import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { User } from '../models/User.js';
 import { Workspace } from '../models/Workspace.js';
+import { Admin } from '../models/Admin.js';
 import { requireAuth, signToken } from '../middleware/auth.js';
+import { signAdminToken } from '../middleware/admin.js';
 import { SECTORS, sectorLabel } from '../sectors.js';
 import { bankIdFor, ensureBank } from '../services/hindsight.js';
-import { audit, asUser, companyOf, hideEmail, ipOf } from '../services/audit.js';
+import { audit, asAdmin, asUser, companyOf, hideEmail, ipOf } from '../services/audit.js';
 
 const router = Router();
 
@@ -65,18 +67,28 @@ router.post('/signup', signupLimiter, async (req, res) => {
   res.status(201).json({ token: signToken(user), user: publicUser(user), workspace: publicWorkspace(workspace) });
 });
 
-// Accounts for teammates are added by the owner with `npm run add-user`.
+// One login page for everyone. A MIRA admin's email opens the admin dashboard; a company email opens
+// that company's workspace. Teammates are added by the owner with `npm run add-user`, admins with `npm run create-admin`.
 router.post('/login', loginLimiter, async (req, res) => {
-  const { email, password } = req.body || {};
-  const user = email && (await User.findOne({ email: String(email).toLowerCase().trim() }));
-  if (!user || !(await bcrypt.compare(String(password || ''), user.passwordHash))) {
-    audit({ category: 'access', action: 'user.login', outcome: 'failed', actor: { kind: 'anonymous', email: hideEmail(email) }, ip: ipOf(req) });
+  const email = String(req.body?.email || '').toLowerCase().trim();
+  const password = String(req.body?.password || '');
+
+  const admin = email && (await Admin.findOne({ email }));
+  if (admin && (await bcrypt.compare(password, admin.passwordHash))) {
+    audit({ category: 'access', action: 'admin.login', actor: asAdmin(admin), ip: ipOf(req) });
+    return res.json({ kind: 'admin', token: signAdminToken(admin), admin: { name: admin.name, email: admin.email } });
+  }
+
+  const user = email && (await User.findOne({ email }));
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    audit({ category: 'access', action: admin && !user ? 'admin.login' : 'user.login', outcome: 'failed',
+      actor: { kind: 'anonymous', email: hideEmail(email) }, ip: ipOf(req) });
     return res.status(401).json({ error: 'That email and password don\'t match.' });
   }
   const workspace = await Workspace.findById(user.workspace);
   if (!workspace) return res.status(403).json({ error: 'Your account is not linked to a company.' });
   audit({ category: 'access', action: 'user.login', actor: asUser(user), company: companyOf(workspace), ip: ipOf(req) });
-  res.json({ token: signToken(user), user: publicUser(user), workspace: publicWorkspace(workspace) });
+  res.json({ kind: 'company', token: signToken(user), user: publicUser(user), workspace: publicWorkspace(workspace) });
 });
 
 router.get('/me', requireAuth, (req, res) => res.json({ user: publicUser(req.user), workspace: publicWorkspace(req.workspace) }));

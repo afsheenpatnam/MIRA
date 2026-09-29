@@ -1,36 +1,22 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
-import { Admin } from '../models/Admin.js';
 import { User } from '../models/User.js';
 import { Workspace } from '../models/Workspace.js';
 import { AuditBlock } from '../models/AuditBlock.js';
 import { sourcesFor } from '../models/Incident.js';
-import { requireAdmin, signAdminToken } from '../middleware/admin.js';
+import { requireAdmin } from '../middleware/admin.js';
 import { deleteBank } from '../services/hindsight.js';
 import { companyStats, askAdmin } from '../services/platform.js';
-import { audit, asAdmin, companyOf, hideEmail, ipOf, publicBlock } from '../services/audit.js';
+import { audit, asAdmin, companyOf, ipOf, publicBlock } from '../services/audit.js';
 
-// Platform admin: usage counts, account details and the audit ledger for every company.
+// Platform admin: usage counts, account details and the audit logs for every company.
 // Admins never receive the content of a company's incidents or conversations.
+// Admins log in on the normal login page (POST /api/auth/login), which recognises admin emails.
 const router = Router();
 
-const loginLimiter = rateLimit({ windowMs: 15 * 60_000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false,
-  message: { error: 'Too many login attempts. Wait 15 minutes and try again.' } });
 const askLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: 'draft-7', legacyHeaders: false,
   message: { error: 'Too many questions in a minute. Wait a moment and try again.' } });
-
-router.post('/login', loginLimiter, async (req, res) => {
-  const { email, password } = req.body || {};
-  const admin = email && (await Admin.findOne({ email: String(email).toLowerCase().trim() }));
-  if (!admin || !(await bcrypt.compare(String(password || ''), admin.passwordHash))) {
-    audit({ category: 'access', action: 'admin.login', outcome: 'failed', actor: { kind: 'anonymous', email: hideEmail(email) }, ip: ipOf(req) });
-    return res.status(401).json({ error: 'That email and password don\'t match an admin account.' });
-  }
-  audit({ category: 'access', action: 'admin.login', actor: asAdmin(admin), ip: ipOf(req) });
-  res.json({ token: signAdminToken(admin), admin: { name: admin.name, email: admin.email } });
-});
 
 router.use(requireAdmin);
 
