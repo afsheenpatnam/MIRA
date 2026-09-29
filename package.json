@@ -1,0 +1,13 @@
+{
+  "name": "mira",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MIRA: Memory-Integrated Response Agent. Builds the website and runs the API server that also serves it.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "npm ci --prefix server && npm ci --prefix client --include=dev && npm run build --prefix client",
+    "start": "npm start --prefix server"
+  }
+}

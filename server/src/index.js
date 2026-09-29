@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -12,7 +15,15 @@ import adminRoutes from './routes/admin.js';
 
 const app = express();
 
-app.use(helmet());
+// On Render (or behind any proxy) the visitor's IP arrives in X-Forwarded-For. Rate limits and audit logs need it.
+if (process.env.RENDER || process.env.TRUST_PROXY) app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    // "Save as image" on a fix plan draws the diagram from a blob: URL.
+    directives: { 'img-src': ["'self'", 'data:', 'blob:'] },
+  },
+}));
 app.use(cors({ origin: config.clientOrigin }));
 // Small bodies everywhere except the import route, which parses its own larger limit.
 const smallJson = express.json({ limit: '32kb' });
@@ -24,6 +35,18 @@ app.use('/api/auth', authRoutes);
 app.use('/api/workspace', workspaceRoutes);
 app.use('/api/ingest', ingestRoutes);
 app.use('/api/admin', adminRoutes);
+
+// In production the same server also serves the built website (client/dist), so the site and API share one address.
+const site = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
+if (fs.existsSync(path.join(site, 'index.html'))) {
+  app.use('/assets', express.static(path.join(site, 'assets'), { maxAge: '1y', immutable: true }));
+  app.use(express.static(site, { index: false }));
+  // Pages like /app, /login and /admin are handled by React, so every other GET gets index.html.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+    res.set('Cache-Control', 'no-cache').sendFile(path.join(site, 'index.html'));
+  });
+}
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found.' }));
 
@@ -38,7 +61,7 @@ app.use((err, _req, res, _next) => {
   const upstream = err?.name === 'HindsightError' ? 'Hindsight memory' : err?.status && err?.headers ? 'Groq' : null;
   res.status(502).json({
     error: upstream
-      ? `MIRA couldn't reach ${upstream}. Check the API key and URL in server/.env, then try again.`
+      ? `MIRA couldn't reach ${upstream}. Check its API key and URL in the server settings, then try again.`
       : err.message || 'Something went wrong on the server.',
   });
 });
@@ -48,4 +71,4 @@ process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', 
 process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
 
 await connectDb();
-app.listen(config.port, () => console.log(`MIRA API listening on http://localhost:${config.port}`));
+app.listen(config.port, () => console.log(`MIRA listening on port ${config.port}`));

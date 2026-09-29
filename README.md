@@ -131,6 +131,17 @@ npm run add-user -- --email teammate@company.com --name "Their Name" --company "
 
 If MongoDB fails with `querySrv ECONNREFUSED`, your local DNS refuses SRV lookups. The server already resolves `mongodb+srv://` addresses through public DNS; set `MONGO_DNS=system` to turn that off.
 
+## Deploy (Render)
+
+MIRA deploys as one web service: `npm run build` installs both parts and builds the website into `client/dist`, and `npm start` runs the API server, which also serves the website. The site and API share one address.
+
+1. On [render.com](https://render.com), choose **New → Blueprint** and pick this repository. Render reads [`render.yaml`](render.yaml).
+2. Paste the five secrets when asked: `MONGODB_URI`, `JWT_SECRET`, `AUDIT_SECRET`, `HINDSIGHT_API_KEY`, `GROQ_API_KEY`. Use the same values as in your local `server/.env`, especially `AUDIT_SECRET`, or the existing audit logs will fail their tamper check.
+3. In MongoDB Atlas, **Network Access** must allow `0.0.0.0/0`, because Render's addresses change.
+4. Wait for the first deploy (a few minutes), then open the `onrender.com` address.
+
+Every push to `main` redeploys automatically. On the free plan the service sleeps after 15 minutes without visitors, and the first visit after that takes about a minute to wake it. Open the site a minute before a demo.
+
 ## API
 
 All `/api/workspace` routes need `Authorization: Bearer <token>` and act on the signed-in user's own company.

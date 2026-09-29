@@ -1,0 +1,33 @@
+# Deploys MIRA on Render as one web service: the Express API also serves the built website.
+# Render dashboard → New → Blueprint → choose this repository, then paste the secret values when asked.
+services:
+  - type: web
+    name: mira
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Secrets: copy each value from server/.env on the machine that already runs MIRA.
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: AUDIT_SECRET
+        sync: false
+      - key: HINDSIGHT_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      # Not secret
+      - key: HINDSIGHT_URL
+        value: https://api.hindsight.vectorize.io
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: BANK_PREFIX
+        value: mira-
+      # Render's DNS resolves mongodb+srv addresses fine, so skip the local-machine workaround.
+      - key: MONGO_DNS
+        value: system
