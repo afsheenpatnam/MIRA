@@ -4,12 +4,14 @@ MIRA is an AI on-call engineer that learns from your company's own incident hist
 
 Built for **Hack with Hyd** on **Hindsight** by Vectorize.
 
+**Live demo: https://mira-wngn.onrender.com** (free hosting: if it has been idle, the first visit takes about a minute to wake up)
+
 ## Team
 
 | Member | Role | Built |
 |---|---|---|
 | Afsheen Patnam ([@afsheenpatnam](https://github.com/afsheenpatnam)) | Team lead · AI agent & memory | The incident agent (routing, recall, reasoning for new issues, follow-ups, feedback), Hindsight and Groq integration, Insights, and admin MIRA's daily briefings |
-| [@harshiashaik119-ctrl](https://github.com/harshiashaik119-ctrl) | Backend & security | Express API, a separate database per company, sign-up and JWT login, private-data masking, CSV/PDF/Word import, alert webhook, admin API and tamper-proof audit logs |
+| S. Harshia ([@harshiashaik119-ctrl](https://github.com/harshiashaik119-ctrl)) | Backend & security | Express API, a separate database per company, sign-up and JWT login, private-data masking, CSV/PDF/Word import, alert webhook, admin API and tamper-proof audit logs |
 | G. Sreevalli ([@sreevalligodiganuru08-collab](https://github.com/sreevalligodiganuru08-collab)) | Frontend & UI/UX design | Design system, landing page, animated navigation and sections, the WebGL ember orb, sign-up and login screens, app styling |
 | Sania Shaik ([@saniashaik112007-hash](https://github.com/saniashaik112007-hash)) | Voice & console experience | Spoken answers with synced subtitles, the pop-up orb, "Hey MIRA" and mic input, the chat console, fix-plan diagrams, and the sample incident datasets |
 
@@ -55,7 +57,7 @@ Sample CSVs for all three sectors are in [`sample-data/`](sample-data/).
 
 ## Platform admin
 
-`/admin` is for the team that runs MIRA. The admin opens it and asks MIRA what happened today.
+The admin dashboard is for the team that runs MIRA. Admins use the same login page as everyone else: MIRA recognises an admin email and opens the admin dashboard instead of a company workspace. The admin then asks MIRA what happened today.
 
 - **Today**: click **Give me today's update** (or type or speak any question) and the orb pops up and speaks the answer: new companies, questions, imports, fix results and sign-in problems since midnight, which companies need attention, and what changed since yesterday. MIRA answers only from usage counts, account details and the audit logs. It never sees a company's incidents or conversations.
 - **Companies**: every workspace, its people and imports, and delete-with-typed-name.
@@ -117,7 +119,7 @@ Then open http://localhost:5173, sign up, and import the CSVs for your sector fr
 
 Hindsight Cloud: sign up at https://ui.hindsight.vectorize.io, add the promo code `MEMHACK99` under Billing, and create an API key. The API URL is `https://api.hindsight.vectorize.io`.
 
-To use the platform admin page at `/admin` (all companies, usage counts, storage, delete a company), create an admin account first. Admins see counts and account details only, never a company's incidents or conversations:
+To use the admin dashboard (all companies, usage counts, audit logs, delete a company), create an admin account first, then log in with it on the normal login page. Admins see counts and account details only, never a company's incidents or conversations:
 
 ```bash
 npm run create-admin -- --email you@example.com --name "Your Name" --password "at-least-8-chars"
@@ -149,7 +151,7 @@ All `/api/workspace` routes need `Authorization: Bearer <token>` and act on the 
 | Method | Path | Does |
 |---|---|---|
 | POST | `/api/auth/signup` | `{ sector, company, name, email, password }` → creates the company workspace and first account |
-| POST | `/api/auth/login` | Log in, returns a JWT, the user and their company |
+| POST | `/api/auth/login` | One login for everyone: returns `kind: "company"` with a JWT, the user and their company, or `kind: "admin"` with an admin token for a MIRA admin email |
 | GET | `/api/auth/me` | The signed-in user and company |
 | GET | `/api/workspace` | Company details and number of incidents learned |
 | GET | `/api/workspace/suggestions` | Prompts built from the company's most frequent problems |
@@ -162,11 +164,10 @@ All `/api/workspace` routes need `Authorization: Bearer <token>` and act on the 
 | POST | `/api/workspace/ingest-key` | Creates a new webhook key (returned once) |
 | POST | `/api/ingest/alert` | For monitoring tools. Header `X-MIRA-Key`, no login |
 
-Admin routes (`/api/admin`, admin token only):
+Admin routes (`/api/admin`, admin token only; admins get their token from `POST /api/auth/login`, which returns `kind: "admin"` for an admin email):
 
 | Method | Path | Does |
 |---|---|---|
-| POST | `/login` | Admin login |
 | GET | `/companies`, `/companies/:id` | Usage counts and account details |
 | DELETE | `/companies/:id` | `{ confirm: "<exact name>" }` → deletes the company, its database and memory bank |
 | POST | `/ask` | `{ text, recent, tz }` → admin MIRA: `{ type, brief, full, points, suggest }` |
@@ -180,7 +181,7 @@ Admin routes (`/api/admin`, admin token only):
 4. The orb pops up and speaks the short answer. Then show the **fix plan** diagram and **Save as image**.
 5. Click **Compare with a generic answer**, then **Fix worked**.
 6. Open **Insights** and click **Read aloud**.
-7. Log in at `/admin`, click **Give me today's update**, and let MIRA speak the day's briefing.
+7. Log out, log in with the admin email on the same login page, click **Give me today's update**, and let MIRA speak the day's briefing.
 8. Open **Audit logs** and show the failed logins caught under **Failed**.
 
 All companies, people and incidents in `sample-data/` are synthetic.
